@@ -213,3 +213,19 @@ interface SunMoonRepository {
 
 ## Phase 3–6
 Not yet started. See project roadmap for scope.
+
+---
+
+## Post-Phase-2 Addendum: OVATION Aurora Map Image (intentional architecture exception)
+
+Considered a full grid-based domain model (list of lat/lon/probability points) for rendering an OVATION overlay on a map, but simplified to NOAA's ready-made static forecast image instead (https://services.swpc.noaa.gov/images/aurora-forecast-northern-hemisphere.jpg), per the "simple, no-fuss" product goal.
+
+**Decision:** no domain model, no repository interface for this feature.
+
+**Reasoning:** a repository exists to abstract something that varies, needs parsing/transformation, or needs testing. This feature has none of that — it's a static URL handed directly to an image-loading library (Coil), which already handles fetching/decoding/caching. Wrapping it in Clean Architecture layers would be ceremony without benefit. This is a deliberate, reasoned exception to the pattern used everywhere else — not an inconsistency.
+
+**Implementation notes (Presentation layer, not Domain):**
+
+- URL stored as a single named constant, not inlined in a Composable, so a future NOAA URL change has one obvious place to be updated.
+- Cache-busting: append `?t=${System.currentTimeMillis()}` to the URL on each fetch. Confirmed necessary — Coil caches by URL, so an unchanging URL can silently serve a stale cached image even though the underlying file changes server-side.
+- Refresh timing is a `viewModelScope` loop, not WorkManager — this is screen-visibility-scoped (only while the app is open), not background work, so it doesn't belong in Phase 6. On screen open: check `lastFetchTime`; if stale (> 1hr old), refresh immediately; otherwise wait out the remaining time before the next refresh. Naturally stops when the ViewModel is cleared, no explicit cancellation needed.
