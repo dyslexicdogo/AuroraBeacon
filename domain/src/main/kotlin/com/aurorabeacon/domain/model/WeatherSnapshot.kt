@@ -1,11 +1,12 @@
 package com.aurorabeacon.domain.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.datetime.Instant
 
 @Serializable
 data class WeatherSnapshot(
-    val forecastTime: kotlinx.datetime.Instant,
-    val forecastFetchTime: kotlinx.datetime.Instant,
+    val forecastTime: Instant,
+    val forecastFetchTime: Instant,
     val cloudHigh: Int,
     val cloudMid: Int,
     val cloudLow: Int,

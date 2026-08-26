@@ -5,9 +5,7 @@ import com.aurorabeacon.domain.model.SunMoonPosition
 import com.aurorabeacon.domain.repository.SunMoonRepository
 import kotlinx.datetime.Instant
 import kotlinx.datetime.toJavaInstant
-import org.shredzone.commons.suncalc.MoonIllumination
-import org.shredzone.commons.suncalc.MoonPosition
-import org.shredzone.commons.suncalc.SunPosition
+import org.shredzone.commons.suncalc.*
 import kotlin.Result
 import kotlin.time.Duration.Companion.hours
 
