@@ -193,19 +193,19 @@ interface SunMoonRepository {
 
 ## Phase 2 Summary — Complete Domain Layer
 
-**Models:** `Location`, `WeatherSnapshot`, `LocalAuroraActivity`, `KpForecastSlot`, `SunMoonPosition`,
-`FlareClass` (defined, currently unused — parked for a future flare-severity feature)
+**Models:** `Location`, `WeatherSnapshot`, `LocalAuroraActivity`, `KpForecastSlot`, `SunMoonPosition`
 
-**Repositories:** `WeatherRepository`, `KpForecastRepository`, `LocalAuroraActivityRepository`,
-`SunMoonRepository`
+**Repositories:** `WeatherRepository`, `KpForecastRepository`, `LocalAuroraActivityRepository`, `SunMoonRepository`
 
 **Rejected/superseded along the way (kept here for the reasoning trail, not as active design):**
-- Single combined `SolarActivity` (raw Kp/Bz/wind) → replaced by `LocalAuroraActivity` (consumes
-  NOAA's already-localized OVATION probability instead of reimplementing geomagnetic-latitude physics)
+- Single combined `SolarActivity` (raw Kp/Bz/wind) → replaced by `LocalAuroraActivity` (consumes NOAA's already-localized OVATION probability instead of reimplementing geomagnetic-latitude physics)
+- `SolarActivity` + `FlareClass` (live L1 solar wind/flare data) → **removed**; not needed for v1 scoring which uses OVATION probability directly
 - `SpaceWeatherAlert` (CME arrival window) → superseded by `KpForecastSlot` for v1
-- Pre-computed `dewPointSpread`, `NightPhase` enum, `isHeadOutNowAlertActive` getter → all rejected
-  as derived/interpreted values that don't belong on raw data models
+- Pre-computed `dewPointSpread`, `NightPhase` enum, `isHeadOutNowAlertActive` getter → all rejected as derived/interpreted values that don't belong on raw data models
 - `moonAzimuth` → kept, but flagged as captured-and-unused until Phase 4 formula explicitly weights it
+
+**Time representation:** `kotlinx.datetime.Instant` (multiplatform) — not `java.time.Instant`
+- `SolarActivity` + `FlareClass` → **removed from domain**. The app uses `LocalAuroraActivity` (OVATION probability at a coordinate) instead of raw solar wind/Kp/Bz/flare data. This avoids reimplementing geomagnetic-latitude physics; NOAA's OVATION model already produces a localized probability. `KpForecastSlot` is retained for the 3-day forecast view.
 
 ---
 
@@ -229,3 +229,22 @@ Considered a full grid-based domain model (list of lat/lon/probability points) f
 - URL stored as a single named constant, not inlined in a Composable, so a future NOAA URL change has one obvious place to be updated.
 - Cache-busting: append `?t=${System.currentTimeMillis()}` to the URL on each fetch. Confirmed necessary — Coil caches by URL, so an unchanging URL can silently serve a stale cached image even though the underlying file changes server-side.
 - Refresh timing is a `viewModelScope` loop, not WorkManager — this is screen-visibility-scoped (only while the app is open), not background work, so it doesn't belong in Phase 6. On screen open: check `lastFetchTime`; if stale (> 1hr old), refresh immediately; otherwise wait out the remaining time before the next refresh. Naturally stops when the ViewModel is cleared, no explicit cancellation needed.
+
+---
+
+## Post-Phase-2 Addendum: Time Representation — `kotlinx.datetime.Instant`
+
+**Decision:** All domain models use `kotlinx.datetime.Instant` (from `kotlinx-datetime` library), not `java.time.Instant`.
+
+**Reasoning:**
+- Multiplatform-friendly — works on JVM, Android, iOS, JS, Native without platform-specific code
+- Kotlin-first API with operator overloads (`+`, `-`, comparison) and duration arithmetic (`Duration`, `TimeZone`)
+- `java.time` is JVM-only; using it would leak platform types into the Domain layer, breaking pure Kotlin multiplatform compatibility
+- Open-Meteo and NOAA APIs return ISO-8601 strings (`"2024-01-15T06:00:00Z"`), which `kotlinx.datetime.Instant.parse()` handles directly
+- Serialization: `kotlinx.serialization` has built-in support for `kotlinx.datetime` types via `kotlinx-datetime-serialization`
+
+**Implementation:** Add to Domain module dependencies:
+```kotlin
+implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+implementation("org.jetbrains.kotlinx:kotlinx-datetime-serialization:0.6.0")
+```
