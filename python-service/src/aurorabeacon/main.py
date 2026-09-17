@@ -9,13 +9,37 @@ built and tested independently of any web framework at all.
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from .scheduler import create_scheduler
 
-from cache import load_cache
-from forecast import build_forecast
+from .cache import load_cache
+from .forecast import build_forecast
 
+# ============================================================
+# lifespan
+# ============================================================
 
-app = FastAPI(title="AuroraBeacon")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = create_scheduler()
+    scheduler.start()
+    app.state.scheduler = scheduler
+    yield
+    scheduler.shutdown()
 
+app = FastAPI(title="AuroraBeacon", lifespan=lifespan)
+
+# ============================================================
+# debug
+# ============================================================
+
+@app.get("/debug/jobs")
+def debug_jobs():
+    scheduler = app.state.scheduler
+    return [
+        {"id": job.id, "next_run": str(job.next_run_time)}
+        for job in scheduler.get_jobs()
+    ]
 
 # ============================================================
 # HEALTH CHECK
@@ -60,3 +84,4 @@ def forecast(hours: int = 72):
         "ovation_observation_time": cache.ovation_observation_time,
         "forecast": points,
     }
+

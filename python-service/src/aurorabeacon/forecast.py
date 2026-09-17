@@ -17,9 +17,9 @@ logic itself without also fighting timezone conversion at the same time.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from window_generator import build_period_spans, generate_30_min_windows, get_dark_windows
-from moon import get_moon_state_for_time
-from scoring import calculate_score, ScoreBreakdown
+from .window_generator import build_period_spans, generate_30_min_windows, get_dark_windows
+from .moon import get_moon_state_for_time
+from .scoring import calculate_score, ScoreBreakdown
 
 
 # ============================================================

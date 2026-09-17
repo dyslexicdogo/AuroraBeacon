@@ -22,7 +22,7 @@ the two real edge cases discovered along the way:
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from window_generator import parse_time
+from .window_generator import parse_time
 
 
 # ============================================================

@@ -82,3 +82,25 @@ if __name__ == "__main__":
         print(f"No cache file found at {CACHE_PATH}")
         print("Set AURORA_CACHE_PATH env var to point at the real file, e.g.:")
         print("  AURORA_CACHE_PATH=/path/to/aurora_cache.json uv run cache.py")
+
+
+# ============================================================
+# cache file update helper
+# ============================================================
+
+def update_cache(updates: dict, path: str = CACHE_PATH) -> None:
+    """
+    Merges `updates` into the existing cache file, touching only the keys
+    provided - existing keys from other fetchers are left untouched.
+    Creates the file if it doesn't exist yet.
+    """
+    try:
+        with open(path, "r") as f:
+            current = json.load(f)
+    except FileNotFoundError:
+        current = {}
+
+    current.update(updates)
+
+    with open(path, "w") as f:
+        json.dump(current, f, indent=2)
