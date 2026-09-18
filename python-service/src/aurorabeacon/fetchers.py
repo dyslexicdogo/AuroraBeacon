@@ -186,7 +186,7 @@ def fetch_ovation() -> None:
 # Run this file directly to fetch all four sources once, in sequence.
 # ============================================================
 
-if __name__ == "__main__":
+def main() -> None:
     print("Fetching Kp...")
     fetch_kp()
     print("Fetching weather...")
@@ -196,3 +196,7 @@ if __name__ == "__main__":
     print("Fetching OVATION...")
     fetch_ovation()
     print("Done - check aurora_cache.json")
+
+
+if __name__ == "__main__":
+    main()

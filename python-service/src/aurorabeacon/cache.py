@@ -15,16 +15,17 @@ those strings back into real lists/dicts.
 import json
 import os
 from dataclasses import dataclass
-
+from pathlib import Path
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-# Overridable via environment variable so this can point at wherever the
-# cache file actually lives (currently: wherever the n8n container writes
-# it; later: wherever this service's own scheduler writes it instead).
-CACHE_PATH = os.environ.get("AURORA_CACHE_PATH", "./aurora_cache.json")
+
+# Anchored to this file's own location, not the process's working directory -
+# always resolves to the same file no matter where `uv run` is launched from.
+DEFAULT_CACHE_PATH = Path(__file__).resolve().parent.parent.parent / "aurora_cache.json"
+CACHE_PATH = os.environ.get("AURORA_CACHE_PATH", str(DEFAULT_CACHE_PATH))
 
 
 # ============================================================
