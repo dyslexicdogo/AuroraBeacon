@@ -4,9 +4,9 @@ services:
     container_name: aurorabeacon
     restart: always
     ports:
-      - "127.0.0.1:47291:8000"
+      - "47291:8000"
     volumes:
-      - aurorabeacon_data:/app
+      - aurorabeacon_data:/app/data
 volumes:
   aurorabeacon_data:
     external: false
