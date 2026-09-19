@@ -21,6 +21,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from .fetchers import fetch_kp, fetch_weather, fetch_astro, fetch_ovation
+from .notification_job import run_evening_check
+
 
 
 def _safe(fn):
@@ -68,4 +70,10 @@ def create_scheduler() -> BackgroundScheduler:
         id="fetch_astro",
     )
 
+    # once daily, at 7pm, to send notifications for the evening
+    scheduler.add_job(_safe(run_evening_check),
+                      CronTrigger(hour="19", minute="0"),
+                      id="notification_job")
+
     return scheduler
+

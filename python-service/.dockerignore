@@ -1,0 +1,7 @@
+.venv
+__pycache__
+*.pyc
+aurora_cache.json
+.git
+.gitignore
+README.md

@@ -1,0 +1,12 @@
+services:
+  aurorabeacon:
+    build: .
+    container_name: aurorabeacon
+    restart: always
+    ports:
+      - "127.0.0.1:47291:8000"
+    volumes:
+      - aurorabeacon_data:/app
+volumes:
+  aurorabeacon_data:
+    external: false
