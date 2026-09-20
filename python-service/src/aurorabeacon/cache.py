@@ -40,6 +40,7 @@ class AuroraCache:
     ovation_probability: float
     ovation_observation_time: str | None
     ovation_forecast_time: str | None
+    ovation_updated_at: str | None
 
 
 # ============================================================
@@ -65,6 +66,7 @@ def load_cache(path: str = CACHE_PATH) -> AuroraCache:
         ovation_probability=raw.get("ovation_probability", 0.0),
         ovation_observation_time=raw.get("ovation_observation_time"),
         ovation_forecast_time=raw.get("ovation_forecast_time"),
+        ovation_updated_at=raw.get("ovation_updated_at")
     )
 
 
