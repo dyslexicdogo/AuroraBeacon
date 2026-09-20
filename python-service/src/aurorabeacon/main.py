@@ -7,11 +7,12 @@ built and tested independently of any web framework at all.
 """
 
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
-from .scheduler import create_scheduler
 
+from .scheduler import create_scheduler
 from .cache import load_cache
 from .forecast import build_forecast
 from .fetchers import fetch_kp, fetch_weather, fetch_astro, fetch_ovation
@@ -110,3 +111,17 @@ async def lifespan(app: FastAPI):
 
     yield
     scheduler.shutdown()
+
+
+
+# ============================================================
+# Remove this later
+# ============================================================
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
