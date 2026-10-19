@@ -16,11 +16,12 @@ def send_notification(title: str, message: str, priority: str = "default") -> No
     if not NTFY_TOPIC:
         print("[notifier] NTFY_TOPIC not set - skipping notification")
         return
-    httpx.post(
+    response = httpx.post(
         f"https://ntfy.sh/{NTFY_TOPIC}",
         data=message.encode("utf-8"),
         headers={"Title": title, "Priority": priority},
     )
+    response.raise_for_status()
 
 
 if __name__ == "__main__":

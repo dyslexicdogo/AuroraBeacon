@@ -21,3 +21,5 @@ ENV AURORA_CACHE_PATH=/app/data/aurora_cache.json
 EXPOSE 8000
 
 CMD ["/app/.venv/bin/uvicorn", "aurorabeacon.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+ENV PYTHONUNBUFFERED=1g

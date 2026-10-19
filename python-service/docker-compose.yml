@@ -7,8 +7,9 @@ services:
       - "47291:8000"
     volumes:
       - aurorabeacon_data:/app/data
+    environment:
+      - NTFY_TOPIC=${NTFY_TOPIC}
+
 volumes:
   aurorabeacon_data:
     external: false
-environment:
-  - NTFY_TOPIC=${NTFY_TOPIC}
