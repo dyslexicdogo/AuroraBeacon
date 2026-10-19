@@ -17,25 +17,44 @@ from .cache import load_cache
 from .forecast import build_forecast
 from .fetchers import fetch_kp, fetch_weather, fetch_astro, fetch_ovation
 
+def refresh_missing_sources() -> None:
+    try:
+        cache = load_cache()
+    except FileNotFoundError:
+        cache = None
+
+    if cache is None or not cache.astro_days:
+        print("[startup] astro_json missing - fetching")
+        fetch_astro()
+    if cache is None or not cache.kp_forecast:
+        print("[startup] kpforecast_json missing - fetching")
+        fetch_kp()
+    if cache is None or not cache.weather_hourly:
+        print("[startup] weather_json missing - fetching")
+        fetch_weather()
+    if cache is None or cache.ovation_updated_at is None:
+        print("[startup] ovation data missing - fetching")
+        fetch_ovation()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     scheduler = create_scheduler()
     scheduler.start()
     app.state.scheduler = scheduler
-
-    try:
-        load_cache()
-    except FileNotFoundError:
-        print("[startup] No cache found - fetching all sources once now")
-        fetch_kp()
-        fetch_weather()
-        fetch_astro()
-        fetch_ovation()
-
+    refresh_missing_sources()
     yield
     scheduler.shutdown()
 
+
+app = FastAPI(title="AuroraBeacon", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 app = FastAPI(title="AuroraBeacon", lifespan=lifespan)
 
@@ -103,50 +122,3 @@ def forecast(hours: int = 72):
     }
 
 
-# ============================================================
-# scheduler lifespan
-# ============================================================
-
-def refresh_missing_sources() -> None:
-    try:
-        cache = load_cache()
-    except FileNotFoundError:
-        cache = None
-
-    if cache is None or not cache.astro_days:
-        print("[startup] astro_json missing - fetching")
-        fetch_astro()
-    if cache is None or not cache.kp_forecast:
-        print("[startup] kpforecast_json missing - fetching")
-        fetch_kp()
-    if cache is None or not cache.weather_hourly:
-        print("[startup] weather_json missing - fetching")
-        fetch_weather()
-    if cache is None or cache.ovation_updated_at is None:
-        print("[startup] ovation data missing - fetching")
-        fetch_ovation()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    scheduler = create_scheduler()
-    scheduler.start()
-    app.state.scheduler = scheduler
-
-    refresh_missing_sources()
-
-    yield
-    scheduler.shutdown()
-
-
-# ============================================================
-# Remove this later
-# ============================================================
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET"],
-    allow_headers=["*"],
-)

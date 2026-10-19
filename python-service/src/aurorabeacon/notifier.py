@@ -7,12 +7,15 @@ just sends whatever title/message it's given.
 """
 
 import httpx
+import os
 
-# Keep this private - anyone who knows it can read or post to your topic.
-NTFY_TOPIC = "aurorabeacon-invss-x7f2q"  # replace with your own
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC")
 
 
 def send_notification(title: str, message: str, priority: str = "default") -> None:
+    if not NTFY_TOPIC:
+        print("[notifier] NTFY_TOPIC not set - skipping notification")
+        return
     httpx.post(
         f"https://ntfy.sh/{NTFY_TOPIC}",
         data=message.encode("utf-8"),

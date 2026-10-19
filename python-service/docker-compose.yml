@@ -10,3 +10,5 @@ services:
 volumes:
   aurorabeacon_data:
     external: false
+environment:
+  - NTFY_TOPIC=${NTFY_TOPIC}
