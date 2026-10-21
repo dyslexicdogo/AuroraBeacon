@@ -16,12 +16,20 @@ logic itself without also fighting timezone conversion at the same time.
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from .window_generator import build_period_spans, generate_30_min_windows, get_dark_windows
 from .moon import get_moon_state_for_time
 from .scoring import calculate_score, ScoreBreakdown
 
 
+_UTC = ZoneInfo("UTC")
+_LOCAL = ZoneInfo("Europe/London")
+
+
+def _utc_to_local_naive(dt: datetime) -> datetime:
+    """Weather and Kp timestamps are UTC; windows are naive local time."""
+    return dt.replace(tzinfo=_UTC).astimezone(_LOCAL).replace(tzinfo=None)
 # ============================================================
 # CONSTANTS
 # ============================================================
@@ -57,7 +65,7 @@ def find_nearest_weather(weather_hourly: list[dict], moment: datetime) -> dict |
 
     def parse_weather_time(entry: dict) -> datetime:
         # Open-Meteo's hourly "time" looks like "2026-09-11T07:00" - no seconds.
-        return datetime.strptime(entry["time"], "%Y-%m-%dT%H:%M")
+        return _utc_to_local_naive(datetime.strptime(entry["time"], "%Y-%m-%dT%H:%M"))
 
     return min(weather_hourly, key=lambda entry: abs(parse_weather_time(entry) - moment))
 
@@ -71,7 +79,7 @@ def find_kp_for_time(kp_forecast: list[dict], moment: datetime) -> float:
     """
     def parse_kp_time(entry: dict) -> datetime:
         # NOAA's time_tag looks like "2026-09-11T07:00:00".
-        return datetime.strptime(entry["time_tag"], "%Y-%m-%dT%H:%M:%S")
+        return _utc_to_local_naive(datetime.strptime(entry["time_tag"], "%Y-%m-%dT%H:%M:%S"))
 
     window = timedelta(hours=KP_MATCH_WINDOW_HOURS)
     nearby = [entry for entry in kp_forecast if abs(parse_kp_time(entry) - moment) < window]
