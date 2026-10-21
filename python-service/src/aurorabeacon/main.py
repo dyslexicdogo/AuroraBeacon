@@ -6,10 +6,12 @@ between HTTP and the real logic (cache.py, forecast.py), which were already
 built and tested independently of any web framework at all.
 """
 
+import os
+
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .scheduler import create_scheduler
@@ -47,35 +49,17 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(title="AuroraBeacon", lifespan=lifespan)
+app = FastAPI(title="AuroraBeacon", lifespan=lifespan,
+              docs_url=None, redoc_url=None, openapi_url=None)
+
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "https://dyslexicdogo.github.io").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
-
-app = FastAPI(title="AuroraBeacon", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET"],
-    allow_headers=["*"],
-)
-
-# ============================================================
-# debug
-# ============================================================
-
-@app.get("/debug/jobs")
-def debug_jobs():
-    scheduler = app.state.scheduler
-    return [
-        {"id": job.id, "next_run": str(job.next_run_time)}
-        for job in scheduler.get_jobs()
-    ]
 
 # ============================================================
 # HEALTH CHECK
@@ -93,7 +77,7 @@ def health():
 # ============================================================
 
 @app.get("/forecast")
-def forecast(hours: int = 72):
+def forecast(hours: int = Query(72, ge=1, le=96)):
     """
     Returns the scored dark-window forecast, starting from right now.
     `hours` is optional (default 72, matching the 3-night goal) - lets the
