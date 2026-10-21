@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>AuroraBeacon · Inverness</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --card: #131a2e;
+    --line: #2e3654;
+    --text: #e8ecf4;
+    --muted: #8892a6;
+    --high: #4ade80;
+    --med: #facc15;
+    --low: #475069;
+    --accent: #3b6ee0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  .sub { color: var(--muted); font-size: 0.85rem; }
+  button.refresh {
+    background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+    padding: 8px 16px; font-size: 0.9rem; cursor: pointer;
+  }
+  button.refresh:disabled { background: var(--line); cursor: wait; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 8px; }
+  .big { font-size: 2.6rem; font-weight: 700; line-height: 1; }
+  .big.high { color: var(--high); }
+  .big.med { color: var(--med); }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+
+  .night-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .night-head h3 { margin: 0; font-size: 1rem; }
+
+  .bars { display: flex; align-items: flex-end; gap: 2px; height: 120px; margin-top: 10px; }
+  .bar { flex: 1 1 0; min-width: 6px; border: 0; padding: 0; border-radius: 3px 3px 0 0; cursor: pointer; opacity: 0.85; }
+  .bar.high { background: var(--high); }
+  .bar.med { background: var(--med); }
+  .bar.low { background: var(--low); }
+  .bar.sel { outline: 2px solid var(--text); opacity: 1; }
+  .bar:focus-visible { outline: 2px solid var(--accent); }
+  .axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+
+  #detail dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 10px 0 0; font-size: 0.9rem; }
+  #detail dt { color: var(--muted); }
+  #detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .why { margin-top: 10px; font-size: 0.9rem; }
+
+  #msg { color: #ff8a8a; margin: 10px 0; }
+  footer { color: var(--muted); font-size: 0.78rem; margin-top: 24px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>🌌 AuroraBeacon</h1>
+      <div class="sub">Inverness · all times UK · <span id="updated">not loaded yet</span></div>
+    </div>
+    <button class="refresh" id="refreshButton">Refresh</button>
+  </header>
+
+  <div id="msg" role="status"></div>
+
+  <section class="card" id="heroCard" hidden>
+    <h2>Best window coming up</h2>
+    <div class="big" id="heroScore">--</div>
+    <div id="heroWhen" class="muted"></div>
+    <div id="heroVerdict"></div>
+  </section>
+
+  <section class="card" id="ovationCard" hidden>
+    <h2>Right now · NOAA OVATION</h2>
+    <div class="big" id="ovationScore">--</div>
+    <div class="muted" id="ovationNote"></div>
+  </section>
+
+  <section id="nights"></section>
+
+  <section class="card" id="detail" hidden aria-live="polite"></section>
+
+  <footer>
+    Scores are a model estimate (space weather, cloud, visibility, darkness and moon),
+    not a calibrated probability. Only dark-sky windows are shown.
+  </footer>
+  <noscript>This page needs JavaScript to load the forecast.</noscript>
+</main>
+
+<script>
+// ---------- Settings ----------
+const API_URL = "https://ab.145252.xyz/forecast";
+const HIGH = 60;                 // score at/above this = green
+const MED = 30;                  // score at/above this = yellow
+const REFRESH_MS = 5 * 60 * 1000;
+
+// ---------- Small helpers ----------
+const $ = (id) => document.getElementById(id);
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// API times look like "2026-10-19T21:30:00" and are already UK wall-clock time.
+// Build a Date from the parts so the clock reading is kept whatever the viewer's timezone.
+function parseLocal(iso) {
+  const [d, t] = iso.split("T");
+  const [y, m, day] = d.split("-").map(Number);
+  const [h, mi] = t.split(":").map(Number);
+  return new Date(y, m - 1, day, h, mi);
+}
+const fmtTime = (d) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const fmtDay = (d) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
+const level = (s) => (s >= HIGH ? "high" : s >= MED ? "med" : "low");
+function verdict(s) {
+  if (s >= HIGH) return "Good chance. Worth going out.";
+  if (s >= MED) return "Possible. Keep an eye on it.";
+  return "Unlikely.";
+}
+
+// Windows before noon belong to the previous evening's night.
+function nightStart(d) {
+  const n = new Date(d);
+  if (n.getHours() < 12) n.setDate(n.getDate() - 1);
+  n.setHours(0, 0, 0, 0);
+  return n;
+}
+
+function reasons(score) {
+  const out = [];
+  if (score.kp_gate_value < 0.2) out.push("held back by low Kp");
+  if (score.cloud_gate_value < 0.5) out.push("held back by cloud cover");
+  if (score.darkness_score < 50) out.push("sky not fully dark");
+  return out.length ? "Score is " + out.join(", ") + "." : "No major limiting factor.";
+}
+
+// ---------- Rendering ----------
+let selectedBtn = null;
+
+function showDetail(point, btn) {
+  if (selectedBtn) selectedBtn.classList.remove("sel");
+  selectedBtn = btn;
+  btn.classList.add("sel");
+
+  const s = point.score;
+  const box = $("detail");
+  box.replaceChildren();
+  box.appendChild(el("h2", null, "Selected window"));
+  box.appendChild(el("div", "big " + level(s.final_score), s.final_score + "%"));
+  box.appendChild(el("div", "muted", fmtDay(point.date) + " · " + fmtTime(point.date) + " · " + point.sky_period));
+
+  const dl = el("dl");
+  const rows = [
+    ["Space weather", s.aurora_score.toFixed(0) + "%"],
+    ["Sky clarity", s.sky_clarity_score.toFixed(0) + "%"],
+    ["Darkness", s.darkness_score.toFixed(0) + "%"],
+    ["Kp gate", "×" + s.kp_gate_value.toFixed(2)],
+    ["Cloud gate", "×" + s.cloud_gate_value.toFixed(2)],
+  ];
+  for (const [k, v] of rows) {
+    dl.appendChild(el("dt", null, k));
+    dl.appendChild(el("dd", null, v));
+  }
+  box.appendChild(dl);
+  box.appendChild(el("div", "why", reasons(s)));
+  box.hidden = false;
+}
+
+function renderNight(group) {
+  const card = el("section", "card");
+  const best = group.reduce((a, b) => (b.score.final_score > a.score.final_score ? b : a));
+
+  const head = el("div", "night-head");
+  head.appendChild(el("h3", null, fmtDay(group[0].nightStart) + " night"));
+  head.appendChild(el("span", "muted", "best " + fmtTime(best.date) + " · " + best.score.final_score + "%"));
+  card.appendChild(head);
+
+  const bars = el("div", "bars");
+  let bestBtn = null;
+  for (const p of group) {
+    const b = el("button", "bar " + level(p.score.final_score));
+    b.type = "button";
+    b.style.height = Math.max(p.score.final_score, 4) + "%";
+    b.setAttribute("aria-label", fmtTime(p.date) + ", " + p.score.final_score + "%, " + p.sky_period);
+    b.title = fmtTime(p.date) + " · " + p.score.final_score + "%";
+    b.addEventListener("click", () => showDetail(p, b));
+    bars.appendChild(b);
+    if (p === best) bestBtn = b;
+  }
+  card.appendChild(bars);
+
+  const axis = el("div", "axis");
+  axis.appendChild(el("span", null, fmtTime(group[0].date)));
+  axis.appendChild(el("span", null, fmtTime(group[group.length - 1].date)));
+  card.appendChild(axis);
+
+  return { card, best, bestBtn };
+}
+
+function render(data) {
+  const points = data.forecast.map((p) => ({ ...p, date: parseLocal(p.time) }));
+
+  // OVATION
+  const obs = new Date(data.ovation_observation_time);
+  $("ovationScore").textContent = data.ovation_probability + "%";
+  $("ovationNote").textContent =
+    "Aurora probability at your location, 30–90 min lead. Observed " +
+    obs.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) + ".";
+  $("ovationCard").hidden = false;
+
+  const nightsBox = $("nights");
+  nightsBox.replaceChildren();
+  $("detail").hidden = true;
+  selectedBtn = null;
+
+  if (points.length === 0) {
+    $("heroCard").hidden = true;
+    $("msg").textContent = "No dark-sky windows in range yet. Check back after dusk.";
+    return;
+  }
+  $("msg").textContent = "";
+
+  // Group into nights, keeping the API's chronological order.
+  const groups = new Map();
+  for (const p of points) {
+    const ns = nightStart(p.date);
+    p.nightStart = ns;
+    const key = ns.getTime();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  }
+
+  let overall = null;
+  let overallBtn = null;
+  for (const group of groups.values()) {
+    const { card, best, bestBtn } = renderNight(group);
+    nightsBox.appendChild(card);
+    if (!overall || best.score.final_score > overall.score.final_score) {
+      overall = best;
+      overallBtn = bestBtn;
+    }
+  }
+
+  // Hero
+  const s = overall.score.final_score;
+  $("heroScore").textContent = s + "%";
+  $("heroScore").className = "big " + level(s);
+  $("heroWhen").textContent = fmtDay(overall.date) + " · " + fmtTime(overall.date) + " · " + overall.sky_period;
+  $("heroVerdict").textContent = verdict(s);
+  $("heroCard").hidden = false;
+
+  // Pre-select the best window so the detail panel is never empty.
+  showDetail(overall, overallBtn);
+}
+
+// ---------- Loading ----------
+let lastLoad = 0;
+
+async function load() {
+  const btn = $("refreshButton");
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+  try {
+    const res = await fetch(API_URL);
+    if (res.status === 503) {
+      $("msg").textContent = "The server is still fetching its first data. Try again in a minute.";
+      return;
+    }
+    if (!res.ok) throw new Error("API returned " + res.status);
+    render(await res.json());
+    lastLoad = Date.now();
+    $("updated").textContent = "updated " + fmtTime(new Date());
+  } catch (err) {
+    $("msg").textContent = "Couldn't reach the AuroraBeacon server (" + err.message + ").";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Refresh";
+  }
+}
+
+$("refreshButton").addEventListener("click", load);
+setInterval(load, REFRESH_MS);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && Date.now() - lastLoad > 2 * 60 * 1000) load();
+});
+load();
+</script>
+</body>
+</html>

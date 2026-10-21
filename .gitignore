@@ -1,1 +1,5 @@
-python-service/src/aurorabeacon/aurora_cache.json
+python-service/src/aurorabeacon/aurora_cache.json__pycache__/
+*.pyc
+.venv/
+aurora_cache.json
+.env
