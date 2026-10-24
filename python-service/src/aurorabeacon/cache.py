@@ -16,6 +16,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+import threading
 
 # ============================================================
 # CONFIGURATION
@@ -91,19 +92,31 @@ if __name__ == "__main__":
 # cache file update helper
 # ============================================================
 
+
+_write_lock = threading.Lock()
+
+
 def update_cache(updates: dict, path: str = CACHE_PATH) -> None:
-    """
-    Merges `updates` into the existing cache file, touching only the keys
-    provided - existing keys from other fetchers are left untouched.
-    Creates the file if it doesn't exist yet.
-    """
+    """Merges `updates` into the cache file. Thread-safe, and the write is atomic."""
+    with _write_lock:
+        try:
+            with open(path, "r") as f:
+                current = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            current = {}
+
+        current.update(updates)
+
+        tmp_path = path + ".tmp"
+        with open(tmp_path, "w") as f:
+            json.dump(current, f, indent=2)
+        os.replace(tmp_path, path)  # readers see the old file or the new one, never half of one
+
+
+def read_value(key: str, default=None, path: str = CACHE_PATH):
+    """Read one raw top-level key (used for small state like alert dedupe)."""
     try:
         with open(path, "r") as f:
-            current = json.load(f)
-    except FileNotFoundError:
-        current = {}
-
-    current.update(updates)
-
-    with open(path, "w") as f:
-        json.dump(current, f, indent=2)
+            return json.load(f).get(key, default)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return default

@@ -1,0 +1,6 @@
+What’s left
+The “go now” alert. This is the biggest gap. Right now you only get the 7pm planning alert. The original idea was a second alert when conditions are good right now: dark, clear enough, and OVATION or Kp high. It needs dedupe so you aren’t pinged every 30 minutes through one good night.
+Tune the 50% threshold. Watch real scores for a week or two first.
+Rate limiting. I still need to know how ab.145252.xyz reaches the container (Traefik, a Cloudflare tunnel or something else). That decides where the limit goes.
+Show raw values on the site. Expose cloud %, Kp and moon per window in the API, so the detail panel shows real numbers.
+Housekeeping. Update ARCHITECTURE_DECISIONS.md for the Python service, and add tests for the scoring, moon and window modules.

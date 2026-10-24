@@ -22,6 +22,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from .fetchers import fetch_kp, fetch_weather, fetch_astro, fetch_ovation
 from .notification_job import run_evening_check
+from .go_now import run_go_now_check
 
 
 
@@ -74,6 +75,12 @@ def create_scheduler() -> BackgroundScheduler:
     scheduler.add_job(_safe(run_evening_check),
                       CronTrigger(hour="19", minute="0"),
                       id="notification_job")
+
+    scheduler.add_job(
+        _safe(run_go_now_check),
+        CronTrigger(hour="18-23,0-6", minute="5,35"),
+        id="go_now",
+    )
 
     return scheduler
 
