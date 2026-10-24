@@ -12,7 +12,7 @@ import os
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC")
 
 
-def send_notification(title: str, message: str, priority: str = "default") -> None:
+def send_notification(title: str, message: str, priority: str = "default",  tags: str = "") -> None:
     if not NTFY_TOPIC:
         print("[notifier] NTFY_TOPIC not set - skipping notification")
         return

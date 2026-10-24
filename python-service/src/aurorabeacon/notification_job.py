@@ -40,7 +40,6 @@ def run_evening_check() -> None:
             message=f"Best chance tonight: {best.score.final_score}% around "
                     f"{best.time.strftime('%H:%M')} ({best.sky_period})",
             priority="high",
-            tags="milky_way",
         )
     else:
         print(f"[notification_job] Best score tonight: "
