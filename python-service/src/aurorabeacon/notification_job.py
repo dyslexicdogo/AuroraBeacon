@@ -36,10 +36,11 @@ def run_evening_check() -> None:
 
     if best and best.score.final_score >= ALERT_THRESHOLD:
         send_notification(
-            title="Aurora Alert 🌌",
+            title="Aurora Alert",
             message=f"Best chance tonight: {best.score.final_score}% around "
                     f"{best.time.strftime('%H:%M')} ({best.sky_period})",
             priority="high",
+            tags="milky_way",
         )
     else:
         print(f"[notification_job] Best score tonight: "
