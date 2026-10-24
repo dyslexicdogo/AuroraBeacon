@@ -49,6 +49,14 @@ class ForecastPoint:
     time: datetime
     sky_period: str
     score: ScoreBreakdown
+    # The raw inputs behind the score, so the site can show real numbers
+    kp: float
+    cloud_cover: float
+    visibility_km: float
+    temperature_c: float
+    dew_point_c: float
+    moon_up: bool
+    moon_illumination: float  # after the horizon ramp, as used in the score
 
 
 # ============================================================
@@ -128,7 +136,18 @@ def build_forecast(
             practical_moon_illumination_percent=moon_state.practical_moon_illumination,
         )
 
-        results.append(ForecastPoint(time=window_time, sky_period=sky_period, score=score))
+        results.append(ForecastPoint(
+            time=window_time,
+            sky_period=sky_period,
+            score=score,
+            kp=max_kp,
+            cloud_cover=cloud_cover,
+            visibility_km=round(visibility / 1000, 1),
+            temperature_c=temperature,
+            dew_point_c=dew_point,
+            moon_up=moon_state.is_moon_up,
+            moon_illumination=moon_state.practical_moon_illumination,
+        ))
 
     return results
 
