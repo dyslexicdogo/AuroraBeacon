@@ -64,6 +64,9 @@
 
   #msg { color: #ff8a8a; margin: 10px 0; }
   footer { color: var(--muted); font-size: 0.78rem; margin-top: 24px; line-height: 1.5; }
+
+  #detail h2.sub-h { margin-top: 14px; }
+
 </style>
 </head>
 <body>
@@ -156,6 +159,16 @@ function reasons(score) {
 // ---------- Rendering ----------
 let selectedBtn = null;
 
+function addRows(box, title, rows) {
+  box.appendChild(el("h2", "sub-h", title));
+  const dl = el("dl");
+  for (const [k, v] of rows) {
+    dl.appendChild(el("dt", null, k));
+    dl.appendChild(el("dd", null, v));
+  }
+  box.appendChild(dl);
+}
+
 function showDetail(point, btn) {
   if (selectedBtn) selectedBtn.classList.remove("sel");
   selectedBtn = btn;
@@ -168,19 +181,20 @@ function showDetail(point, btn) {
   box.appendChild(el("div", "big " + level(s.final_score), s.final_score + "%"));
   box.appendChild(el("div", "muted", fmtDay(point.date) + " · " + fmtTime(point.date) + " · " + point.sky_period));
 
-  const dl = el("dl");
-  const rows = [
+  addRows(box, "Conditions", [
+    ["Kp (forecast)", point.kp.toFixed(1)],
+    ["Cloud cover", point.cloud_cover + "%"],
+    ["Visibility", point.visibility_km + " km"],
+    ["Temp / dew point", point.temperature_c + "° / " + point.dew_point_c + "°"],
+    ["Moon", point.moon_up ? point.moon_illumination.toFixed(0) + "% lit, up" : "down"],
+  ]);
+  addRows(box, "Score breakdown", [
     ["Space weather", s.aurora_score.toFixed(0) + "%"],
     ["Sky clarity", s.sky_clarity_score.toFixed(0) + "%"],
     ["Darkness", s.darkness_score.toFixed(0) + "%"],
     ["Kp gate", "×" + s.kp_gate_value.toFixed(2)],
     ["Cloud gate", "×" + s.cloud_gate_value.toFixed(2)],
-  ];
-  for (const [k, v] of rows) {
-    dl.appendChild(el("dt", null, k));
-    dl.appendChild(el("dd", null, v));
-  }
-  box.appendChild(dl);
+  ]);
   box.appendChild(el("div", "why", reasons(s)));
   box.hidden = false;
 }
