@@ -1,7 +1,7 @@
 [project]
 name = "aurorabeacon"
 version = "0.1.0"
-description = "Add your description here"
+description = "Aurora visibility alerts for Inverness"
 readme = "README.md"
 authors = [
     { name = "Dyslexic Dogo", email = "88225949+dyslexicdogo@users.noreply.github.com" }
