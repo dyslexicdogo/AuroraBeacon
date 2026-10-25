@@ -6,7 +6,7 @@ AuroraBeacon is a small self-hosted service that tells me when northern lights a
 for from Inverness, Scotland. It combines space weather, cloud cover, darkness and the moon into a
 single score, shows it on a website, and sends a push alert to my phone when it matters.
 
-**Live:** [forecast site](https://dyslexicdogo.github.io/AuroraBeacon/docs/) ·
+**Live:** [forecast site](https://dyslexicdogo.github.io/AuroraBeacon/) ·
 [forecast API](https://ab.145252.xyz/forecast)
 
 > Scores are a model estimate, not a calibrated probability. The thresholds are still being tuned
